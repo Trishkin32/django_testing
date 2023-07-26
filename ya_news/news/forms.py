@@ -1,5 +1,5 @@
-from django.forms import ModelForm
 from django.core.exceptions import ValidationError
+from django.forms import ModelForm
 
 from .models import Comment
 
