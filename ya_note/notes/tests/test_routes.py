@@ -5,6 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from notes.models import Note
+from django.test import Client
 
 User = get_user_model()
 
@@ -15,6 +16,10 @@ class TestRoutes(TestCase):
     def setUpTestData(cls):
         cls.author = User.objects.create(username='Автор')
         cls.reader = User.objects.create(username='Читатель')
+        cls.author_client = Client()
+        cls.reader_client = Client()
+        cls.author_client.force_login(cls.author)
+        cls.reader_client.force_login(cls.reader)
         cls.note = Note.objects.create(
             title='Заголовок',
             text='Текст',
@@ -49,8 +54,7 @@ class TestRoutes(TestCase):
         for address in urls:
             with self.subTest(address):
                 url = reverse(address)
-                self.client.force_login(self.author)
-                response = self.client.get(url)
+                response = self.author_client.get(url)
                 self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_availability_for_note_edit_and_delete(self):
@@ -59,8 +63,8 @@ class TestRoutes(TestCase):
         удаления и редактирования заметки
         """
         users_statuses = (
-            (self.author, HTTPStatus.OK),
-            (self.reader, HTTPStatus.NOT_FOUND)
+            (self.author_client, HTTPStatus.OK),
+            (self.reader_client, HTTPStatus.NOT_FOUND)
         )
         urls = (
             'notes:edit',
@@ -68,11 +72,10 @@ class TestRoutes(TestCase):
             'notes:delete',
         )
         for user, status in users_statuses:
-            self.client.force_login(user)
             for address in urls:
                 with self.subTest(user=user, address=address):
                     url = reverse(address, args=(self.note.slug,))
-                    response = self.client.get(url)
+                    response = user.get(url)
                     self.assertEqual(response.status_code, status)
 
     def test_redirect_for_anonymous_client(self):
